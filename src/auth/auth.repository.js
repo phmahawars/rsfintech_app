@@ -1,4 +1,5 @@
 import { db } from '../config/db.js';
+import { logger } from '../utils/logger.js';
 
 export class AuthRepository {
   constructor() {
@@ -13,19 +14,47 @@ export class AuthRepository {
     const [rows] = await db.query('SHOW COLUMNS FROM users');
     this.columns = new Set(rows.map((row) => row.Field));
 
+    logger.info('Users table columns detected', {
+      columns: [...this.columns]
+    });
+
     return this.columns;
+  }
+
+  async validateSchema() {
+    const columns = await this.getColumns();
+    const missing = [];
+
+    for (const column of ['id', 'email', 'phone']) {
+      if (!columns.has(column)) {
+        missing.push(column);
+      }
+    }
+
+    if (!columns.has('name')) {
+      missing.push('name');
+    }
+
+    if (!columns.has('password_hash') && !columns.has('password')) {
+      missing.push('password_hash or password');
+    }
+
+    if (missing.length > 0) {
+      const error = new Error(`Invalid users table schema. Missing: ${missing.join(', ')}`);
+      error.statusCode = 500;
+      throw error;
+    }
   }
 
   async getUserFields() {
     const columns = await this.getColumns();
-    const fullnameField = columns.has('fullname') ? '`fullname` AS fullname' : '`name` AS fullname';
     const passwordField = columns.has('password_hash') ? '`password_hash` AS passwordHash' : '`password` AS passwordHash';
     const createdAtField = columns.has('created_at') ? '`created_at` AS createdAt' : 'NULL AS createdAt';
     const updatedAtField = columns.has('updated_at') ? '`updated_at` AS updatedAt' : 'NULL AS updatedAt';
 
     return [
       '`id`',
-      fullnameField,
+      '`name`',
       '`email`',
       '`phone`',
       passwordField,
@@ -79,18 +108,17 @@ export class AuthRepository {
     return rows[0] || null;
   }
 
-  async createUser({ fullname, email, phone, passwordHash }) {
+  async createUser({ name, email, phone, passwordHash }) {
     const columns = await this.getColumns();
-    const fullnameColumn = columns.has('fullname') ? '`fullname`' : '`name`';
     const passwordColumn = columns.has('password_hash') ? '`password_hash`' : '`password`';
     const userFields = await this.getUserFields();
 
     const [result] = await db.execute(
       `
-        INSERT INTO users (${fullnameColumn}, email, phone, ${passwordColumn})
+        INSERT INTO users (\`name\`, \`email\`, \`phone\`, ${passwordColumn})
         VALUES (?, ?, ?, ?)
       `,
-      [fullname, email, phone, passwordHash]
+      [name, email, phone, passwordHash]
     );
 
     const [rows] = await db.execute(

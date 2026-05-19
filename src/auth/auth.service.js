@@ -1,10 +1,12 @@
 import argon2 from 'argon2';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 
 const sanitizeUser = (user) => ({
   id: user.id,
-  fullname: user.fullname,
+  name: user.name,
   email: user.email,
   phone: user.phone,
   createdAt: user.createdAt,
@@ -31,9 +33,9 @@ export class AuthService {
         sub: String(user.id),
         email: user.email
       },
-      process.env.JWT_SECRET,
+      env.JWT_SECRET,
       {
-        expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+        expiresIn: env.JWT_EXPIRES_IN
       }
     );
   }
@@ -57,14 +59,27 @@ export class AuthService {
 
     const passwordHash = await argon2.hash(payload.password);
 
-    const user = await this.authRepository.createUser({
-      fullname: payload.fullname,
-      email: payload.email,
-      phone: payload.phone,
-      passwordHash
-    });
+    let user;
+
+    try {
+      user = await this.authRepository.createUser({
+        name: payload.name,
+        email: payload.email,
+        phone: payload.phone,
+        passwordHash
+      });
+    } catch (error) {
+      if (error.code === 'ER_DUP_ENTRY') {
+        const conflictError = new Error('Email or phone is already registered');
+        conflictError.statusCode = 409;
+        throw conflictError;
+      }
+
+      throw error;
+    }
 
     this.userMemory.set(user);
+    logger.info('User registered', { userId: user.id });
 
     return {
       user: sanitizeUser(user),
@@ -84,7 +99,14 @@ export class AuthService {
     let passwordMatches = false;
 
     if (isArgon2Hash(user.passwordHash)) {
-      passwordMatches = await argon2.verify(user.passwordHash, password);
+      try {
+        passwordMatches = await argon2.verify(user.passwordHash, password);
+      } catch (error) {
+        logger.warn('Argon2 password verification failed', {
+          userId: user.id,
+          message: error.message
+        });
+      }
     } else if (isBcryptHash(user.passwordHash)) {
       passwordMatches = await bcrypt.compare(password, user.passwordHash.replace(/^\$2y\$/, '$2a$'));
 
@@ -92,6 +114,7 @@ export class AuthService {
         const passwordHash = await argon2.hash(password);
         await this.authRepository.updatePasswordHash(user.id, passwordHash);
         user.passwordHash = passwordHash;
+        logger.info('Legacy bcrypt password migrated to Argon2', { userId: user.id });
       }
     } else {
       const error = new Error('Invalid credentials');
@@ -106,6 +129,7 @@ export class AuthService {
     }
 
     this.userMemory.set(user);
+    logger.info('User logged in', { userId: user.id });
 
     return {
       user: sanitizeUser(user),

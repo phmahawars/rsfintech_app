@@ -5,16 +5,28 @@ import { loginSchema, registerSchema, validateRequest } from './auth.validation.
 
 const router = Router();
 
+const getAuthController = (next) => {
+  try {
+    return getContainer().authController;
+  } catch (error) {
+    next(error);
+    return null;
+  }
+};
+
 router.post('/register', validateRequest(registerSchema), (req, res, next) => {
-  return getContainer().authController.register(req, res, next);
+  const authController = getAuthController(next);
+  return authController ? authController.register(req, res, next) : null;
 });
 
 router.post('/login', validateRequest(loginSchema), (req, res, next) => {
-  return getContainer().authController.login(req, res, next);
+  const authController = getAuthController(next);
+  return authController ? authController.login(req, res, next) : null;
 });
 
 router.get('/profile', authenticate, (req, res, next) => {
-  return getContainer().authController.profile(req, res, next);
+  const authController = getAuthController(next);
+  return authController ? authController.profile(req, res, next) : null;
 });
 
 export default router;

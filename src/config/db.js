@@ -1,16 +1,15 @@
 import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { env } from './env.js';
+import { logger } from '../utils/logger.js';
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: env.DB_HOST,
+  port: env.DB_PORT,
+  user: env.DB_USER,
+  password: env.DB_PASSWORD,
+  database: env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
+  connectionLimit: env.DB_CONNECTION_LIMIT,
   queueLimit: 0,
   namedPlaceholders: true
 });
@@ -18,10 +17,36 @@ const pool = mysql.createPool({
 export const db = pool;
 
 export const verifyDatabaseConnection = async () => {
-  const connection = await pool.getConnection();
+  let connection;
+
   try {
-    await connection.ping();
+    logger.info('Checking MySQL connection', {
+      host: env.DB_HOST,
+      port: env.DB_PORT,
+      database: env.DB_NAME,
+      user: env.DB_USER
+    });
+
+    connection = await pool.getConnection();
+    await connection.query('SELECT 1');
+
+    logger.info('MySQL connection verified');
+  } catch (error) {
+    logger.error('MySQL connection failed', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState
+    });
+
+    throw error;
   } finally {
-    connection.release();
+    if (connection) {
+      connection.release();
+    }
   }
+};
+
+export const closeDatabaseConnection = async () => {
+  await pool.end();
 };
