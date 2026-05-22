@@ -23,6 +23,15 @@ const isBcryptHash = (hash) => {
   return typeof hash === 'string' && /^\$2[aby]\$/.test(hash);
 };
 
+const normalizeBcryptHash = (hash) => {
+  return hash.replace(/^\$2y\$/, '$2a$');
+};
+
+const createPhpPasswordHash = async (password) => {
+  const hash = await bcrypt.hash(password, 10);
+  return hash.replace(/^\$2[ab]\$/, '$2y$');
+};
+
 export class AuthService {
   constructor({ authRepository, userMemory }) {
     this.authRepository = authRepository;
@@ -59,7 +68,7 @@ export class AuthService {
       throw error;
     }
 
-    const passwordHash = await argon2.hash(payload.password);
+    const passwordHash = await createPhpPasswordHash(payload.password);
 
     let user;
 
@@ -110,14 +119,7 @@ export class AuthService {
         });
       }
     } else if (isBcryptHash(user.passwordHash)) {
-      passwordMatches = await bcrypt.compare(password, user.passwordHash.replace(/^\$2y\$/, '$2a$'));
-
-      if (passwordMatches) {
-        const passwordHash = await argon2.hash(password);
-        await this.authRepository.updatePasswordHash(user.id, passwordHash);
-        user.passwordHash = passwordHash;
-        logger.info('Legacy bcrypt password migrated to Argon2', { userId: user.id });
-      }
+      passwordMatches = await bcrypt.compare(password, normalizeBcryptHash(user.passwordHash));
     } else {
       const error = new Error('Invalid credentials');
       error.statusCode = 401;

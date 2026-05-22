@@ -128,14 +128,4 @@ export class AuthRepository {
 
     return rows[0];
   }
-
-  async updatePasswordHash(userId, passwordHash) {
-    const columns = await this.getColumns();
-    const passwordColumn = columns.has('password_hash') ? '`password_hash`' : '`password`';
-
-    await db.execute(
-      `UPDATE users SET ${passwordColumn} = ? WHERE id = ?`,
-      [passwordHash, userId]
-    );
-  }
 }
