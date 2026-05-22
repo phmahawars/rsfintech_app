@@ -8,7 +8,7 @@ import swaggerUi from 'swagger-ui-express';
 import authRoutes from './auth/auth.routes.js';
 import { errorResponse } from './utils/response.js';
 import { logger } from './utils/logger.js';
-// Hello world
+
 dotenv.config();
 
 const app = express();
