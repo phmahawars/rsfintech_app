@@ -1,12 +1,14 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { randomUUID } from 'crypto';
 import authRoutes from './auth/auth.routes.js';
-import { env } from './config/env.js';
 import { errorResponse } from './utils/response.js';
 import { logger } from './utils/logger.js';
+
+dotenv.config();
 
 const app = express();
 
@@ -21,8 +23,8 @@ app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-if (env.NODE_ENV !== 'test') {
-  app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 }
 
 app.get('/', (req, res) => {
@@ -38,7 +40,7 @@ app.get('/health', (req, res) => {
     message: 'API is healthy',
     data: {
       uptime: process.uptime(),
-      environment: env.NODE_ENV
+      environment: process.env.NODE_ENV || 'development'
     }
   });
 });
@@ -55,7 +57,7 @@ app.use((error, req, res, next) => {
   const isInvalidJson = error.type === 'entity.parse.failed';
   const message = isInvalidJson
     ? 'Invalid JSON payload'
-    : isServerError && env.NODE_ENV === 'production'
+    : isServerError && process.env.NODE_ENV === 'production'
       ? 'Internal server error'
       : error.message;
 
@@ -78,7 +80,7 @@ app.use((error, req, res, next) => {
     logger.warn('Request rejected', logMeta);
   }
 
-  const errors = env.NODE_ENV === 'production'
+  const errors = process.env.NODE_ENV === 'production'
     ? { requestId: req.requestId }
     : {
         requestId: req.requestId,

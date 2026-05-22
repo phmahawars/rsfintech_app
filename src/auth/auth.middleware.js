@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
-import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
+
+dotenv.config();
 
 export const authenticate = (req, res, next) => {
   const header = req.headers.authorization;
@@ -16,7 +18,7 @@ export const authenticate = (req, res, next) => {
   const token = header.slice(7);
 
   try {
-    const payload = jwt.verify(token, env.JWT_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
     const userId = Number(payload.sub);
 
     if (!Number.isInteger(userId) || userId <= 0) {

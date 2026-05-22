@@ -1,8 +1,10 @@
+import dotenv from 'dotenv';
 import argon2 from 'argon2';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
+
+dotenv.config();
 
 const sanitizeUser = (user) => ({
   id: user.id,
@@ -33,9 +35,9 @@ export class AuthService {
         sub: String(user.id),
         email: user.email
       },
-      env.JWT_SECRET,
+      process.env.JWT_SECRET,
       {
-        expiresIn: env.JWT_EXPIRES_IN
+        expiresIn: process.env.JWT_EXPIRES_IN || '7d'
       }
     );
   }

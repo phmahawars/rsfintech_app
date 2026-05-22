@@ -1,15 +1,17 @@
+import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
-import { env } from './env.js';
 import { logger } from '../utils/logger.js';
 
+dotenv.config();
+
 const pool = mysql.createPool({
-  host: env.DB_HOST,
-  port: env.DB_PORT,
-  user: env.DB_USER,
-  password: env.DB_PASSWORD,
-  database: env.DB_NAME,
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT || 3306),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: env.DB_CONNECTION_LIMIT,
+  connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
   queueLimit: 0,
   namedPlaceholders: true
 });
@@ -21,10 +23,10 @@ export const verifyDatabaseConnection = async () => {
 
   try {
     logger.info('Checking MySQL connection', {
-      host: env.DB_HOST,
-      port: env.DB_PORT,
-      database: env.DB_NAME,
-      user: env.DB_USER
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT || 3306),
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER
     });
 
     connection = await pool.getConnection();
