@@ -114,4 +114,5 @@ process.on('uncaughtException', (error) => {
   });
   process.exit(1);
 });
+// test checker will call startServer() directly, so we only call it here if not in test environment
 startServer();
