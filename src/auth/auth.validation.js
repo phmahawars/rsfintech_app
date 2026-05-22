@@ -11,24 +11,18 @@ export const registerSchema = Joi.object({
 });
 
 export const loginSchema = Joi.object({
-  identifier: Joi.string().trim(),
   email: Joi.string().trim().lowercase().email().max(180),
   phone: Joi.string().trim().pattern(/^[0-9+\-\s()]{7,30}$/),
   password: Joi.string().required()
 })
-  .or('identifier', 'email', 'phone')
-  .custom((value, helpers) => {
-    return {
-      identifier: value.identifier || value.email || value.phone,
-      password: value.password
-    };
-  })
+  .xor('email', 'phone')
   .messages({
-    'object.missing': 'email or phone is required'
+    'object.missing': 'email or phone is required',
+    'object.xor': 'Use either email or phone, not both'
   });
 
 export const validateRequest = (schema) => {
-  return (req, res, next) => {
+  const middleware = (req, res, next) => {
     const { error, value } = schema.validate(req.body, {
       abortEarly: false,
       stripUnknown: true
@@ -46,4 +40,8 @@ export const validateRequest = (schema) => {
     req.body = value;
     return next();
   };
+
+  middleware.swaggerSchema = schema.describe();
+
+  return middleware;
 };

@@ -98,8 +98,8 @@ export class AuthService {
     };
   }
 
-  async login({ identifier, password }) {
-    const user = await this.authRepository.findByEmailOrPhone(identifier);
+  async login({ email, phone, password }) {
+    const user = await this.authRepository.findByLogin({ email, phone });
 
     if (!user) {
       const error = new Error('Invalid credentials');

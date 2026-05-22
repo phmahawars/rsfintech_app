@@ -97,12 +97,21 @@ export class AuthRepository {
     return rows[0] || null;
   }
 
-  async findByEmailOrPhone(identifier) {
+  async findByLogin({ email, phone }) {
     const userFields = await this.getUserFields();
 
+    if (email) {
+      const [rows] = await db.execute(
+        `SELECT ${userFields} FROM users WHERE email = ? LIMIT 1`,
+        [email]
+      );
+
+      return rows[0] || null;
+    }
+
     const [rows] = await db.execute(
-      `SELECT ${userFields} FROM users WHERE email = ? OR phone = ? LIMIT 1`,
-      [identifier, identifier]
+      `SELECT ${userFields} FROM users WHERE phone = ? LIMIT 1`,
+      [phone]
     );
 
     return rows[0] || null;
