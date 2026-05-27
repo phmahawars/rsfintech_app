@@ -6,6 +6,9 @@ import morgan from 'morgan';
 import { randomUUID } from 'crypto';
 import swaggerUi from 'swagger-ui-express';
 import authRoutes from './auth/auth.routes.js';
+import cibilCreditReportsRoutes from './cibil-credit-reports/cibil-credit-reports.routes.js';
+import experianCreditReportsRoutes from './experian-credit-reports/experian-credit-reports.routes.js';
+import crifCreditReportsRoutes from './crif-credit-reports/crif-credit-reports.routes.js';
 import { errorResponse } from './utils/response.js';
 import { logger } from './utils/logger.js';
 
@@ -255,6 +258,9 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/cibil-credit-reports', cibilCreditReportsRoutes);
+app.use('/api/experian-credit-reports', experianCreditReportsRoutes);
+app.use('/api/crif-credit-reports', crifCreditReportsRoutes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(buildSwaggerSpec(), {
   customSiteTitle: 'RSFintech API Docs',
